@@ -53,7 +53,7 @@ export default function Scene8_Summary({ meta, step, onRestart }) {
           <div className="flex items-center justify-between pt-4 border-t border-current/20">
             <div className="flex flex-col gap-0.5">
               <div className="text-[26px] font-display">
-                PART A: PRESENTER 1 • PART B: PRESENTER 2
+                ARIB MOMIN • ROHAN GAWADE • SNEHA DHOLE • SANIKA KHARADE
               </div>
               <div className="text-[20px] font-mono opacity-60">
                 Operating Systems • File-System Layers &amp; Architecture

@@ -8,13 +8,13 @@ export default function HeroHeader({ meta, step, children }) {
     <div className="relative w-full h-full flex flex-col justify-between">
       {isHero ? (
         <div className="relative w-full h-full flex flex-col justify-between py-4">
-          {/* Top numeral and part badge */}
+          {/* Top numeral and section badge */}
           <div className="flex items-center justify-between">
             <div className="text-[24px] font-mono tracking-widest opacity-60">
               {meta.subtitle}
             </div>
-            <div className="text-[24px] font-display px-5 py-1.5 border border-current rounded-full">
-              PART {meta.part}
+            <div className="text-[20px] font-mono opacity-60 uppercase">
+              MODULE OVERVIEW
             </div>
           </div>
 
@@ -70,7 +70,7 @@ export default function HeroHeader({ meta, step, children }) {
             </div>
 
             <div className="text-[20px] font-display border border-current px-5 py-1.5 rounded-full">
-              PART {meta.part} • STEP {step} / {meta.totalSteps - 1}
+              STEP {step} / {meta.totalSteps - 1}
             </div>
           </div>
 

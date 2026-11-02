@@ -28,7 +28,7 @@ import {
   X
 } from "lucide-react";
 
-import { scenesMeta, presenters } from "./data.js";
+import { scenesMeta } from "./data.js";
 import {
   Scene1_Title,
   Scene2_FileManagement,
@@ -376,7 +376,7 @@ export default function App() {
                 </span>
               </div>
 
-              {/* Right presenter and quick toggles */}
+              {/* Right quick toggles */}
               <div className="flex items-center gap-4">
                 {/* Timer badge */}
                 {showTimer && (
@@ -385,11 +385,6 @@ export default function App() {
                     <span>{formatTime(elapsed)}</span>
                   </div>
                 )}
-
-                {/* Presenter Pill */}
-                <div className="font-display text-[18px] px-4 py-1 border border-current rounded-full tracking-wide">
-                  {presenters[currentScene.part]}
-                </div>
 
                 {/* Control Action Icons */}
                 <div className="flex items-center gap-1.5">

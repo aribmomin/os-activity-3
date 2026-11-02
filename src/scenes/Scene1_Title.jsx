@@ -16,8 +16,8 @@ export default function Scene1_Title() {
         <div className="text-[24px] font-mono tracking-widest opacity-60">
           OPERATING SYSTEMS • LECTURE MODULE
         </div>
-        <div className="text-[24px] font-display px-5 py-1.5 border border-current rounded-full">
-          PRESENTER 1 & 2
+        <div className="text-[20px] font-mono opacity-50 uppercase">
+          STORAGE ARCHITECTURES
         </div>
       </div>
 

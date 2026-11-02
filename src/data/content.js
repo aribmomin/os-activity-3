@@ -5,10 +5,10 @@
 
 /* ── Group members ──────────────────────────────────────────── */
 export const groupMembers = [
-  "Member 1",
-  "Member 2",
-  "Member 3",
-  "Member 4",
+  "Arib Momin",
+  "Rohan Gawade",
+  "Sneha Dhole",
+  "Sanika Kharade",
 ];
 
 /* ── Presenter names per part ───────────────────────────────── */

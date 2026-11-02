@@ -4,10 +4,10 @@
  */
 
 export const groupMembers = [
-  "ALEX RIVERA",
-  "JORDAN CHEN",
-  "SAMIRA KHAN",
-  "MARCUS VANCE"
+  "ARIB MOMIN",
+  "ROHAN GAWADE",
+  "SNEHA DHOLE",
+  "SANIKA KHARADE"
 ];
 
 export const presenters = {

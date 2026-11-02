@@ -4,7 +4,7 @@
  * Implements:
  * - 16:9 fixed canvas (1920x1080) with automatic proportional scaling
  * - Strictly Bicolor dynamic theming: alternating #004643 Green and #F0EDE5 Cream
- * - Custom magnetic / smooth cursor with interactive hover expansion
+ * - Custom smooth round magnetic cursor consistent across every page with zero re-render lag
  * - Keyboard navigation (Space/Arrows, 1-8 jump, T timer, F fullscreen, H hide UI)
  * - Sound effects (soft procedural Web Audio API clicks with mute toggle)
  * - Top information bar (topic, part, presenter, timer, quick controls)
@@ -30,25 +30,26 @@ import {
 
 import { scenesMeta, presenters } from "./data.js";
 import {
-  Scene1Landing,
-  Scene2FileManagement,
-  Scene3WhyLayers,
-  Scene4The6Layers,
-  Scene5LiveTrace,
-  Scene6VFS,
-  Scene7ProsCons,
-  Scene8Summary
-} from "./scenes.jsx";
+  Scene1_Title,
+  Scene2_FileManagement,
+  Scene3_WhyLayers,
+  Scene4_Layers,
+  Scene5_LiveTrace,
+  Scene6_VFS,
+  Scene7_ProsCons,
+  Scene8_Summary
+} from "./scenes/index.js";
+import CustomCursor from "./components/CustomCursor.jsx";
 
 const sceneComponents = [
-  Scene1Landing,
-  Scene2FileManagement,
-  Scene3WhyLayers,
-  Scene4The6Layers,
-  Scene5LiveTrace,
-  Scene6VFS,
-  Scene7ProsCons,
-  Scene8Summary
+  Scene1_Title,
+  Scene2_FileManagement,
+  Scene3_WhyLayers,
+  Scene4_Layers,
+  Scene5_LiveTrace,
+  Scene6_VFS,
+  Scene7_ProsCons,
+  Scene8_Summary
 ];
 
 const CANVAS_W = 1920;
@@ -92,7 +93,7 @@ class SoundFX {
       osc.start();
       osc.stop(this.ctx.currentTime + 0.06);
     } catch {
-      // Audio autoplay policy catch
+      // Audio catch
     }
   }
 
@@ -132,9 +133,6 @@ export default function App() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [soundOn, setSoundOn] = useState(true);
   const [showToast, setShowToast] = useState(true);
-  const [cursorPos, setCursorPos] = useState({ x: -100, y: -100 });
-  const [cursorHover, setCursorHover] = useState(false);
-  const [cursorVisible, setCursorVisible] = useState(false);
 
   const containerRef = useRef(null);
   const timerRef = useRef(null);
@@ -157,43 +155,6 @@ export default function App() {
     handleResize();
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
-  /* ── Custom Mouse Cursor Tracking ──────────────────────────────────────── */
-  useEffect(() => {
-    document.body.classList.add("custom-cursor-active");
-
-    const onMouseMove = (e) => {
-      setCursorPos({ x: e.clientX, y: e.clientY });
-      setCursorVisible(true);
-
-      const target = e.target;
-      if (
-        target &&
-        (target.closest("[data-clickable]") ||
-          target.closest("button") ||
-          target.closest("a") ||
-          target.closest(".card-interactive"))
-      ) {
-        setCursorHover(true);
-      } else {
-        setCursorHover(false);
-      }
-    };
-
-    const onMouseLeave = () => setCursorVisible(false);
-    const onMouseEnter = () => setCursorVisible(true);
-
-    window.addEventListener("mousemove", onMouseMove);
-    document.addEventListener("mouseleave", onMouseLeave);
-    document.addEventListener("mouseenter", onMouseEnter);
-
-    return () => {
-      document.body.classList.remove("custom-cursor-active");
-      window.removeEventListener("mousemove", onMouseMove);
-      document.removeEventListener("mouseleave", onMouseLeave);
-      document.removeEventListener("mouseenter", onMouseEnter);
-    };
   }, []);
 
   /* ── Presenter Timer ───────────────────────────────────────────────────── */
@@ -290,7 +251,6 @@ export default function App() {
   /* ── Keyboard Shortcuts ────────────────────────────────────────────────── */
   useEffect(() => {
     const handleKeyDown = (e) => {
-      // Ignore if focus is in an input or textarea
       if (
         document.activeElement &&
         ["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement.tagName)
@@ -382,44 +342,8 @@ export default function App() {
         isGreen ? "bg-[#004643]" : "bg-[#F0EDE5]"
       }`}
     >
-      {/* ── Custom Magnetic Cursor ───────────────────────────────────────── */}
-      {cursorVisible && !hideUI && (
-        <>
-          <motion.div
-            className="fixed pointer-events-none z-50 rounded-full mix-blend-difference"
-            animate={{
-              x: cursorPos.x - (cursorHover ? 28 : 8),
-              y: cursorPos.y - (cursorHover ? 28 : 8),
-              width: cursorHover ? 56 : 16,
-              height: cursorHover ? 56 : 16,
-              backgroundColor: "#F0EDE5",
-              opacity: cursorHover ? 0.8 : 0.95
-            }}
-            transition={{
-              type: "spring",
-              stiffness: 450,
-              damping: 28,
-              mass: 0.1
-            }}
-          />
-          {cursorHover && (
-            <motion.div
-              className="fixed pointer-events-none z-50 rounded-full border-2 border-white/60"
-              animate={{
-                x: cursorPos.x - 36,
-                y: cursorPos.y - 36,
-                width: 72,
-                height: 72
-              }}
-              transition={{
-                type: "spring",
-                stiffness: 300,
-                damping: 25
-              }}
-            />
-          )}
-        </>
-      )}
+      {/* ── Custom Smooth Round Magnetic Cursor (Zero Lag) ───────────────── */}
+      <CustomCursor theme={currentTheme} />
 
       {/* ── 16:9 Scaled Canvas (1920x1080) ───────────────────────────────── */}
       <div
@@ -429,82 +353,82 @@ export default function App() {
           transform: `scale(${scale})`,
           transformOrigin: "center center"
         }}
-        className={`relative ${themeClass} overflow-hidden shrink-0 flex flex-col justify-between p-8`}
+        className={`relative ${themeClass} overflow-hidden shrink-0 flex flex-col justify-between px-10 py-5`}
       >
         {/* ── Top Information Bar ────────────────────────────────────────── */}
         <AnimatePresence>
           {!hideUI && (
             <motion.header
-              initial={{ y: -60, opacity: 0 }}
+              initial={{ y: -50, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              exit={{ y: -60, opacity: 0 }}
-              transition={{ duration: 0.25 }}
-              className="w-full flex items-center justify-between border-b border-current/20 pb-4 shrink-0 z-30"
+              exit={{ y: -50, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="w-full flex items-center justify-between border-b border-current/20 pb-2.5 shrink-0 z-30"
             >
               {/* Left breadcrumb */}
-              <div className="flex items-center gap-4">
-                <span className="font-display text-[26px] tracking-wider uppercase">
+              <div className="flex items-center gap-3">
+                <span className="font-display text-[22px] tracking-wider uppercase">
                   OPERATING SYSTEMS
                 </span>
                 <span className="opacity-30">•</span>
-                <span className="font-mono text-[22px] opacity-70">
+                <span className="font-mono text-[17px] opacity-70">
                   SCENE 0{currentScene.id} / 0{scenesMeta.length} — {currentScene.title}
                 </span>
               </div>
 
               {/* Right presenter and quick toggles */}
-              <div className="flex items-center gap-6">
+              <div className="flex items-center gap-4">
                 {/* Timer badge */}
                 {showTimer && (
-                  <div className="flex items-center gap-2 px-4 py-1.5 border border-current rounded-full font-mono text-[22px]">
-                    <Timer size={22} strokeWidth={2} />
+                  <div className="flex items-center gap-2 px-3.5 py-1 border border-current rounded-full font-mono text-[17px]">
+                    <Timer size={18} strokeWidth={2} />
                     <span>{formatTime(elapsed)}</span>
                   </div>
                 )}
 
                 {/* Presenter Pill */}
-                <div className="font-display text-[22px] px-5 py-1.5 border border-current rounded-full tracking-wide">
+                <div className="font-display text-[18px] px-4 py-1 border border-current rounded-full tracking-wide">
                   {presenters[currentScene.part]}
                 </div>
 
                 {/* Control Action Icons */}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
                   <button
                     onClick={toggleSound}
                     title={soundOn ? "Mute audio (M)" : "Enable audio (M)"}
-                    className="p-2 border border-current/30 rounded-xl hover:bg-current hover:text-[var(--bg)] transition-colors"
+                    className="p-1.5 border border-current/30 rounded-lg hover:bg-current hover:text-[var(--bg)] transition-colors"
                     data-clickable
                   >
-                    {soundOn ? <Volume2 size={24} /> : <VolumeX size={24} />}
+                    {soundOn ? <Volume2 size={20} /> : <VolumeX size={20} />}
                   </button>
 
                   <button
                     onClick={() => setShowTimer((v) => !v)}
                     title="Toggle timer (T)"
-                    className={`p-2 border border-current/30 rounded-xl hover:bg-current hover:text-[var(--bg)] transition-colors ${
+                    className={`p-1.5 border border-current/30 rounded-lg hover:bg-current hover:text-[var(--bg)] transition-colors ${
                       showTimer ? "bg-current text-[var(--bg)]" : ""
                     }`}
                     data-clickable
                   >
-                    <Timer size={24} />
+                    <Timer size={20} />
                   </button>
 
                   <button
                     onClick={toggleFullscreen}
                     title="Toggle fullscreen (F)"
-                    className="p-2 border border-current/30 rounded-xl hover:bg-current hover:text-[var(--bg)] transition-colors"
+                    className="p-1.5 border border-current/30 rounded-lg hover:bg-current hover:text-[var(--bg)] transition-colors"
                     data-clickable
                   >
-                    {isFullscreen ? <Minimize2 size={24} /> : <Maximize2 size={24} />}
+                    {isFullscreen ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
                   </button>
 
                   <button
                     onClick={() => setHideUI(true)}
                     title="Hide UI chrome (H)"
-                    className="p-2 border border-current/30 rounded-xl hover:bg-current hover:text-[var(--bg)] transition-colors"
+                    className="p-1.5 border border-current/30 rounded-lg hover:bg-current hover:text-[var(--bg)] transition-colors"
                     data-clickable
                   >
-                    <EyeOff size={24} />
+                    <EyeOff size={20} />
                   </button>
                 </div>
               </div>
@@ -517,22 +441,22 @@ export default function App() {
           <button
             onClick={() => setHideUI(false)}
             title="Restore UI (H)"
-            className="absolute top-6 right-6 z-40 p-3 rounded-full border border-current bg-current/10 hover:bg-current hover:text-[var(--bg)] transition-colors"
+            className="absolute top-5 right-5 z-40 p-2.5 rounded-full border border-current bg-current/10 hover:bg-current hover:text-[var(--bg)] transition-colors"
             data-clickable
           >
-            <Eye size={24} />
+            <Eye size={22} />
           </button>
         )}
 
-        {/* ── Main Scene Canvas ──────────────────────────────────────────── */}
-        <main className="flex-1 w-full min-h-0 relative my-4">
+        {/* ── Main Scene Canvas (Optimized height without cutting) ───────── */}
+        <main className="flex-1 w-full min-h-0 relative my-2">
           <AnimatePresence mode="wait">
             <motion.div
               key={sceneIdx}
               initial={{ opacity: 0, scale: 0.99 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 1.01 }}
-              transition={{ duration: 0.3, ease: "easeOut" }}
+              transition={{ duration: 0.25, ease: "easeOut" }}
               className="w-full h-full"
             >
               <CurrentComponent
@@ -548,11 +472,11 @@ export default function App() {
         <AnimatePresence>
           {!hideUI && (
             <motion.footer
-              initial={{ y: 60, opacity: 0 }}
+              initial={{ y: 50, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 60, opacity: 0 }}
-              transition={{ duration: 0.25 }}
-              className="w-full flex flex-col gap-3 pt-3 border-t border-current/20 shrink-0 z-30"
+              exit={{ y: 50, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="w-full flex flex-col gap-2 pt-2.5 border-t border-current/20 shrink-0 z-30"
             >
               {/* Continuous Global Progress Line */}
               <div className="w-full h-1.5 bg-current/20 rounded-full overflow-hidden">
@@ -560,14 +484,14 @@ export default function App() {
                   className="h-full bg-current rounded-full"
                   initial={false}
                   animate={{ width: `${progressRatio * 100}%` }}
-                  transition={{ duration: 0.25, ease: "easeOut" }}
+                  transition={{ duration: 0.2, ease: "easeOut" }}
                 />
               </div>
 
               {/* Controls and Scene Jump Buttons */}
               <div className="w-full flex items-center justify-between">
                 {/* 8 Clickable Scene Buttons */}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
                   {scenesMeta.map((s, idx) => {
                     const isCurrent = idx === sceneIdx;
                     const isPast = idx < sceneIdx;
@@ -575,7 +499,7 @@ export default function App() {
                       <button
                         key={s.id}
                         onClick={() => jumpToScene(idx)}
-                        className={`px-4 py-1.5 rounded-lg border font-mono text-[20px] transition-all ${
+                        className={`px-3 py-1 rounded-lg border font-mono text-[16px] transition-all ${
                           isCurrent
                             ? "border-current bg-current text-[var(--bg)] font-bold shadow-sm"
                             : isPast
@@ -592,21 +516,21 @@ export default function App() {
                 </div>
 
                 {/* Step Sub-Progress */}
-                <div className="font-mono text-[22px] tracking-wide">
+                <div className="font-mono text-[17px] tracking-wide">
                   <span className="opacity-50">STEP </span>
                   <span className="font-bold">{step + 1}</span>
                   <span className="opacity-50"> / {currentScene.totalSteps}</span>
                 </div>
 
                 {/* Next / Prev Buttons */}
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2.5">
                   <button
                     onClick={goPrev}
                     disabled={sceneIdx === 0 && step === 0}
-                    className="flex items-center gap-2 px-5 py-2 border border-current rounded-xl hover:bg-current hover:text-[var(--bg)] disabled:opacity-30 disabled:pointer-events-none transition-colors font-display text-[22px]"
+                    className="flex items-center gap-1.5 px-4 py-1.5 border border-current rounded-xl hover:bg-current hover:text-[var(--bg)] disabled:opacity-30 disabled:pointer-events-none transition-colors font-display text-[18px]"
                     data-clickable
                   >
-                    <ChevronLeft size={24} />
+                    <ChevronLeft size={20} />
                     <span>PREV</span>
                   </button>
 
@@ -616,11 +540,11 @@ export default function App() {
                       sceneIdx === scenesMeta.length - 1 &&
                       step === currentScene.totalSteps - 1
                     }
-                    className="flex items-center gap-2 px-6 py-2 border-2 border-current rounded-xl bg-current text-[var(--bg)] hover:opacity-90 disabled:opacity-30 disabled:pointer-events-none transition-opacity font-display text-[22px]"
+                    className="flex items-center gap-1.5 px-5 py-1.5 border-2 border-current rounded-xl bg-current text-[var(--bg)] hover:opacity-90 disabled:opacity-30 disabled:pointer-events-none transition-opacity font-display text-[18px]"
                     data-clickable
                   >
                     <span>NEXT</span>
-                    <ChevronRight size={24} />
+                    <ChevronRight size={20} />
                   </button>
                 </div>
               </div>
@@ -632,42 +556,42 @@ export default function App() {
         <AnimatePresence>
           {showToast && !hideUI && (
             <motion.div
-              initial={{ opacity: 0, y: 30 }}
+              initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 30 }}
-              transition={{ duration: 0.3 }}
-              className="absolute bottom-28 left-1/2 -translate-x-1/2 z-50 px-8 py-3 rounded-2xl border-2 border-current bg-[var(--bg)] text-[var(--fg)] shadow-2xl flex items-center gap-6 font-mono text-[20px]"
+              exit={{ opacity: 0, y: 20 }}
+              transition={{ duration: 0.25 }}
+              className="absolute bottom-20 left-1/2 -translate-x-1/2 z-50 px-6 py-2.5 rounded-xl border-2 border-current bg-[var(--bg)] text-[var(--fg)] shadow-2xl flex items-center gap-5 font-mono text-[16px]"
             >
               <div className="flex items-center gap-2">
-                <HelpCircle size={24} />
+                <HelpCircle size={20} />
                 <span className="font-bold">SHORTCUTS:</span>
               </div>
               <span>
-                <kbd className="px-2 py-0.5 border border-current rounded font-bold">SPACE</kbd> /{" "}
-                <kbd className="px-2 py-0.5 border border-current rounded font-bold">→</kbd> Next
+                <kbd className="px-1.5 py-0.5 border border-current rounded font-bold">SPACE</kbd> /{" "}
+                <kbd className="px-1.5 py-0.5 border border-current rounded font-bold">→</kbd> Next
               </span>
               <span>
-                <kbd className="px-2 py-0.5 border border-current rounded font-bold">←</kbd> Prev
+                <kbd className="px-1.5 py-0.5 border border-current rounded font-bold">←</kbd> Prev
               </span>
               <span>
-                <kbd className="px-2 py-0.5 border border-current rounded font-bold">1-8</kbd> Jump
+                <kbd className="px-1.5 py-0.5 border border-current rounded font-bold">1-8</kbd> Jump
               </span>
               <span>
-                <kbd className="px-2 py-0.5 border border-current rounded font-bold">T</kbd> Timer
+                <kbd className="px-1.5 py-0.5 border border-current rounded font-bold">T</kbd> Timer
               </span>
               <span>
-                <kbd className="px-2 py-0.5 border border-current rounded font-bold">F</kbd> Fullscreen
+                <kbd className="px-1.5 py-0.5 border border-current rounded font-bold">F</kbd> Fullscreen
               </span>
               <span>
-                <kbd className="px-2 py-0.5 border border-current rounded font-bold">H</kbd> Hide UI
+                <kbd className="px-1.5 py-0.5 border border-current rounded font-bold">H</kbd> Hide UI
               </span>
 
               <button
                 onClick={() => setShowToast(false)}
-                className="p-1 hover:opacity-70 transition-opacity ml-2"
+                className="p-1 hover:opacity-70 transition-opacity ml-1"
                 data-clickable
               >
-                <X size={22} />
+                <X size={18} />
               </button>
             </motion.div>
           )}

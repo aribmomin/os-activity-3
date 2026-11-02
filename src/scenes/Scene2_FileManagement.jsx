@@ -1,136 +1,115 @@
 /**
  * Scene 2 — What is File Management?
- * User view vs Disk reality with a bridge and 6 responsibilities.
+ * User View vs Disk Reality, bridge band, and 6 core responsibilities revealed step-by-step.
  */
-import { motion, AnimatePresence } from "framer-motion";
-import {
-  FileText,
-  Image,
-  Folder,
-  Archive,
-  ArrowRightLeft,
-} from "lucide-react";
-import { sampleFiles, diskBlocks, fmResponsibilities } from "../data/content";
 
-const iconMap = { FileText, Image, Folder, Archive };
+import { motion } from "framer-motion";
+import { FileText, FileCode, Folder } from "lucide-react";
+import HeroHeader from "../components/HeroHeader";
+import { renderIcon, springTransition } from "../utils/theme.jsx";
+import { fileManagementResponsibilities } from "../data.js";
 
-export default function Scene2_FileManagement({ step }) {
-  // step 0: cards appear
-  // step 1-6: responsibilities revealed one at a time
-  const visibleResponsibilities = Math.max(0, step); // step 0 = cards only, steps 1-6 = reveal one responsibility each
+export default function Scene2_FileManagement({ meta, step }) {
+  const visibleResponsibilities = Math.max(0, step);
 
   return (
-    <div className="w-full h-full flex flex-col px-16 py-8 gap-6">
-      {/* Section title */}
-      <motion.h2
-        className="text-3xl font-bold text-text"
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-      >
-        What is <span className="text-accent">File Management</span>?
-      </motion.h2>
-
-      {/* Main row: User View — Bridge — Disk Reality */}
-      <div className="flex-1 flex items-center gap-8">
-        {/* User View Card */}
-        <motion.div
-          className="flex-1 rounded-2xl bg-surface border border-border p-6 flex flex-col gap-4"
-          initial={{ opacity: 0, x: -40 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <h3 className="text-sm font-semibold text-accent uppercase tracking-widest">
-            User View
-          </h3>
-          <p className="text-xs text-text-dim">
-            Files, folders, human-readable names
-          </p>
-          <div className="grid grid-cols-2 gap-3 mt-1">
-            {sampleFiles.map((f) => {
-              const Icon = iconMap[f.icon];
-              return (
-                <div
-                  key={f.name}
-                  className="flex items-center gap-2 px-3 py-2 rounded-xl bg-bg border border-border"
-                >
-                  <Icon className="w-4 h-4 text-accent" />
-                  <span className="text-sm font-mono text-text-muted">
-                    {f.name}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </motion.div>
-
-        {/* Bridge */}
-        <motion.div
-          className="flex flex-col items-center gap-3 shrink-0"
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-        >
-          <motion.div
-            className="w-14 h-14 rounded-2xl bg-accent/10 border border-accent/30 flex items-center justify-center glow-accent"
-            animate={{ y: [0, -4, 0] }}
-            transition={{ repeat: Infinity, duration: 2.5, ease: "easeInOut" }}
-          >
-            <ArrowRightLeft className="w-6 h-6 text-accent" />
-          </motion.div>
-          <span className="text-xs text-accent font-semibold uppercase tracking-widest whitespace-nowrap">
-            File Mgmt
-          </span>
-        </motion.div>
-
-        {/* Disk Reality Card */}
-        <motion.div
-          className="flex-1 rounded-2xl bg-surface border border-border p-6 flex flex-col gap-4"
-          initial={{ opacity: 0, x: 40 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <h3 className="text-sm font-semibold text-text-dim uppercase tracking-widest">
-            Disk Reality
-          </h3>
-          <p className="text-xs text-text-dim">
-            Raw numbered blocks on the physical device
-          </p>
-          <div className="grid grid-cols-6 gap-1.5 mt-1">
-            {diskBlocks.map((b) => (
-              <div
-                key={b}
-                className="flex items-center justify-center h-8 rounded-lg bg-bg border border-border"
-              >
-                <span className="text-[10px] font-mono text-text-dim">
-                  {b}
-                </span>
+    <HeroHeader meta={meta} step={step}>
+      <div className="w-full h-full flex flex-col gap-6">
+        {/* Split Screen Top Section */}
+        <div className="grid grid-cols-2 gap-8 h-[380px] shrink-0">
+          {/* Left: User View */}
+          <div className="p-8 border-2 border-[#004643]/30 rounded-2xl flex flex-col justify-between bg-[#F0EDE5] card-interactive">
+            <div className="flex items-center justify-between">
+              <span className="font-display text-[48px]">USER VIEW</span>
+              <span className="text-[24px] font-mono uppercase opacity-70">Logical Abstraction</span>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="p-4 border border-[#004643]/20 rounded-xl flex flex-col items-center gap-2">
+                <FileText strokeWidth={2} size={48} />
+                <span className="font-mono text-[24px] font-semibold">notes.txt</span>
+                <span className="text-[24px] opacity-60">5,000 bytes</span>
               </div>
-            ))}
+              <div className="p-4 border border-[#004643]/20 rounded-xl flex flex-col items-center gap-2">
+                <FileCode strokeWidth={2} size={48} />
+                <span className="font-mono text-[24px] font-semibold">report.pdf</span>
+                <span className="text-[24px] opacity-60">1.2 MB</span>
+              </div>
+              <div className="p-4 border border-[#004643]/20 rounded-xl flex flex-col items-center gap-2">
+                <Folder strokeWidth={2} size={48} />
+                <span className="font-mono text-[24px] font-semibold">/home/docs</span>
+                <span className="text-[24px] opacity-60">Directory</span>
+              </div>
+            </div>
+            <div className="text-[28px] font-body opacity-80 border-t border-[#004643]/20 pt-3">
+              Abstract, linear, named byte streams with human semantics.
+            </div>
           </div>
-        </motion.div>
-      </div>
 
-      {/* Responsibilities (revealed step by step) */}
-      <div className="flex flex-wrap gap-3 mt-auto">
-        <AnimatePresence>
-          {fmResponsibilities.slice(0, visibleResponsibilities).map((r, i) => (
-            <motion.div
-              key={r.label}
-              className="px-4 py-2 rounded-xl bg-surface border border-border flex flex-col"
-              initial={{ opacity: 0, y: 15, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.35, delay: i * 0.05 }}
-            >
-              <span className="text-sm font-semibold text-accent">
-                {r.label}
-              </span>
-              <span className="text-xs text-text-dim">{r.desc}</span>
-            </motion.div>
-          ))}
-        </AnimatePresence>
+          {/* Right: Disk Reality */}
+          <div className="p-8 border-2 border-[#004643] bg-[#004643] text-[#F0EDE5] rounded-2xl flex flex-col justify-between card-interactive">
+            <div className="flex items-center justify-between">
+              <span className="font-display text-[48px]">DISK REALITY</span>
+              <span className="text-[24px] font-mono uppercase opacity-70">Physical Hardware</span>
+            </div>
+            <div className="grid grid-cols-4 gap-3 font-mono text-[24px] text-center">
+              <div className="p-2 border border-[#F0EDE5]/40 rounded">[Blk 0104]</div>
+              <div className="p-2 border border-[#F0EDE5]/40 rounded bg-[#F0EDE5]/20 font-bold">[Blk 8812]</div>
+              <div className="p-2 border border-[#F0EDE5]/40 rounded">[Blk 4096]</div>
+              <div className="p-2 border border-[#F0EDE5]/40 rounded">[Blk 0019]</div>
+              <div className="p-2 border border-[#F0EDE5]/40 rounded">[Blk 5120]</div>
+              <div className="p-2 border border-[#F0EDE5]/40 rounded">[Blk 7731]</div>
+              <div className="p-2 border border-[#F0EDE5]/40 rounded bg-[#F0EDE5]/20 font-bold">[Blk 8813]</div>
+              <div className="p-2 border border-[#F0EDE5]/40 rounded">[Blk 9002]</div>
+            </div>
+            <div className="text-[28px] font-body opacity-80 border-t border-[#F0EDE5]/20 pt-3">
+              Unordered, raw 4KB blocks across platters and flash cells.
+            </div>
+          </div>
+        </div>
+
+        {/* Center File Management Bridge Band */}
+        <div className="w-full py-2 px-6 border-y-2 border-current flex items-center justify-between bg-current/5">
+          <span className="font-display text-[36px] tracking-wider">
+            FILE MANAGEMENT SYSTEM BRIDGE
+          </span>
+          <span className="font-mono text-[24px] opacity-70">
+            TRANSLATES SYMBOLIC OPERATIONS INTO SECTOR COMMANDS
+          </span>
+        </div>
+
+        {/* Six Responsibilities revealed per step */}
+        <div className="grid grid-cols-6 gap-4 flex-1">
+          {fileManagementResponsibilities.map((resp, i) => {
+            const isRevealed = i < visibleResponsibilities;
+            return (
+              <motion.div
+                key={resp.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{
+                  opacity: isRevealed ? 1 : 0.25,
+                  y: isRevealed ? 0 : 10
+                }}
+                transition={springTransition}
+                className={`p-5 rounded-xl border-2 border-[#004643]/30 flex flex-col justify-between card-interactive ${
+                  isRevealed ? "bg-[#004643]/5" : "opacity-30"
+                }`}
+                data-clickable
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-[24px] opacity-50">0{i + 1}</span>
+                  {renderIcon(resp.iconName, { size: 40 })}
+                </div>
+                <div className="font-display text-[40px] leading-none my-2">
+                  {resp.title}
+                </div>
+                <div className="text-[24px] font-body leading-snug opacity-80">
+                  {resp.description}
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
       </div>
-    </div>
+    </HeroHeader>
   );
 }

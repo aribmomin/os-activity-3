@@ -1,84 +1,106 @@
 /**
- * Scene 1 — Title slide
- * Animated grid background, title, subtitle, group member names.
+ * Scene 1 — Title / Landing Scene
+ * Strictly Bicolor (#004643 & #F0EDE5) with Norwester typography, team badges, and marquee strip.
  */
+
 import { motion } from "framer-motion";
-import { Layers } from "lucide-react";
-import { groupMembers } from "../data/content";
+import { groupMembers } from "../data.js";
+import { springTransition } from "../utils/theme.jsx";
 
-export default function Scene1_Title({ step }) {
+export default function Scene1_Title() {
   return (
-    <div className="relative w-full h-full flex flex-col items-center justify-center overflow-hidden">
-      {/* Animated grid background */}
-      <div className="absolute inset-0 grid-bg opacity-60" />
+    <div className="relative w-full h-full flex flex-col justify-between py-6">
+      {/* Top bar info */}
+      <div className="flex items-center justify-between">
+        <div className="text-[28px] font-mono tracking-widest opacity-60">
+          OPERATING SYSTEMS • LECTURE MODULE
+        </div>
+        <div className="text-[28px] font-display px-6 py-2 border border-current rounded-full">
+          PRESENTER 1 & 2
+        </div>
+      </div>
 
-      {/* Floating accent orbs */}
-      <motion.div
-        className="absolute w-[500px] h-[500px] rounded-full bg-accent/[0.03] blur-3xl"
-        animate={{ x: [0, 40, 0], y: [0, -30, 0] }}
-        transition={{ repeat: Infinity, duration: 8, ease: "easeInOut" }}
-        style={{ top: "10%", left: "15%" }}
-      />
-      <motion.div
-        className="absolute w-[400px] h-[400px] rounded-full bg-accent/[0.02] blur-3xl"
-        animate={{ x: [0, -30, 0], y: [0, 40, 0] }}
-        transition={{ repeat: Infinity, duration: 10, ease: "easeInOut" }}
-        style={{ bottom: "10%", right: "10%" }}
-      />
-
-      {/* Content */}
-      <motion.div
-        className="relative z-10 flex flex-col items-center gap-6"
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-      >
-        {/* Icon */}
-        <motion.div
-          className="w-16 h-16 rounded-2xl bg-accent/10 border border-accent/20 flex items-center justify-center"
-          animate={{ rotate: [0, 5, -5, 0] }}
-          transition={{ repeat: Infinity, duration: 6, ease: "easeInOut" }}
-        >
-          <Layers className="w-8 h-8 text-accent" />
-        </motion.div>
-
-        {/* Title */}
-        <h1 className="text-5xl font-bold text-text tracking-tight text-center leading-tight">
-          File-System Layers
-          <br />
-          <span className="text-accent">&amp; Architecture</span>
-        </h1>
-
-        {/* Subtitle */}
-        <p className="text-lg text-text-muted font-medium">
-          Operating Systems — File Management
-        </p>
-
-        {/* Divider */}
-        <div className="w-24 h-px bg-border mt-2" />
-
-        {/* Group members */}
-        {step >= 1 && (
+      {/* Hero 3-Line Heading */}
+      <div className="relative my-auto flex flex-col justify-center">
+        <div className="absolute right-4 top-1/2 -translate-y-1/2 numeral-outline font-display text-[320px] select-none opacity-20 pointer-events-none leading-none">
+          01
+        </div>
+        <div className="overflow-hidden">
           <motion.div
-            className="flex flex-wrap justify-center gap-3 mt-2"
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
+            initial={{ y: "100%" }}
+            animate={{ y: "0%" }}
+            transition={springTransition}
+            className="font-display text-[156px] leading-[0.84] uppercase"
           >
-            {groupMembers.map((name, i) => (
-              <motion.span
-                key={name}
-                className="px-4 py-1.5 rounded-full bg-surface border border-border text-sm text-text-muted"
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: i * 0.1, duration: 0.3 }}
-              >
-                {name}
-              </motion.span>
-            ))}
+            FILE-SYSTEM
           </motion.div>
-        )}
-      </motion.div>
+        </div>
+        <div className="overflow-hidden">
+          <motion.div
+            initial={{ y: "100%" }}
+            animate={{ y: "0%" }}
+            transition={{ ...springTransition, delay: 0.1 }}
+            className="font-display text-[156px] leading-[0.84] uppercase"
+          >
+            LAYERS &amp;
+          </motion.div>
+        </div>
+        <div className="overflow-hidden">
+          <motion.div
+            initial={{ y: "100%" }}
+            animate={{ y: "0%" }}
+            transition={{ ...springTransition, delay: 0.2 }}
+            className="font-display text-[156px] leading-[0.84] uppercase"
+          >
+            ARCHITECTURE
+          </motion.div>
+        </div>
+      </div>
+
+      {/* Bottom Area: Group Members & Marquee Strip */}
+      <div className="flex flex-col gap-6 pt-4">
+        <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-2">
+            <span className="text-[24px] font-mono opacity-50">PRESENTATION TEAM:</span>
+            <div className="flex items-center gap-4">
+              {groupMembers.map((name) => (
+                <div
+                  key={name}
+                  className="px-6 py-2 rounded-full border border-current/30 text-[28px] font-medium card-interactive"
+                  data-clickable
+                >
+                  {name}
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="text-[24px] font-mono opacity-50">AUDIO/VISUAL TIMING</div>
+            <div className="text-[32px] font-display">~5:00 TOTAL RUNTIME</div>
+          </div>
+        </div>
+
+        {/* Bottom Marquee Strip */}
+        <div className="w-full overflow-hidden border-t border-current/25 pt-4">
+          <div className="marquee-track">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div
+                key={i}
+                className="flex items-center gap-8 pr-8 font-display text-[44px] tracking-wider whitespace-nowrap"
+              >
+                <span>FILE MANAGEMENT</span>
+                <span>/</span>
+                <span>OPERATING SYSTEMS</span>
+                <span>/</span>
+                <span>FILE-SYSTEM LAYERS &amp; ARCHITECTURE</span>
+                <span>/</span>
+                <span>STORAGE ABSTRACTIONS</span>
+                <span>/</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

@@ -1,172 +1,124 @@
 /**
  * Scene 3 — Why Layers?
- * Monolithic vs Layered visualization with benefit/cost chips.
+ * Monolithic Nightmare vs Layered Abstraction with 4 core architectural pillars.
  */
-import { motion, AnimatePresence } from "framer-motion";
-import {
-  Boxes,
-  Layers,
-  CheckCircle2,
-  AlertTriangle,
-} from "lucide-react";
-import { layerBenefits, layerCosts } from "../data/content";
 
-export default function Scene3_WhyLayers({ step }) {
-  // step 0: monolithic block
-  // step 1: transition to layered
-  // step 2: benefit chips appear
-  // step 3: cost chip appears
-  const showLayered = step >= 1;
-  const showBenefits = step >= 2;
-  const showCosts = step >= 3;
+import { motion } from "framer-motion";
+import { Check, X } from "lucide-react";
+import HeroHeader from "../components/HeroHeader";
+import { springTransition } from "../utils/theme.jsx";
 
-  const monolithicLayers = [
-    "Naming", "Allocation", "I/O", "Caching", "Drivers", "Hardware",
-  ];
-
-  const cleanLayers = [
-    "Application Programs",
-    "Logical File System",
-    "File-Organization Module",
-    "Basic File System",
-    "I/O Control",
-    "Devices",
-  ];
-
+export default function Scene3_WhyLayers({ meta, step }) {
   return (
-    <div className="w-full h-full flex flex-col px-16 py-8 gap-6">
-      <motion.h2
-        className="text-3xl font-bold text-text"
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-      >
-        Why <span className="text-accent">Layers</span>?
-      </motion.h2>
+    <HeroHeader meta={meta} step={step}>
+      <div className="w-full h-full flex flex-col justify-between">
+        {/* Top Split: Monolith vs Layered Stack */}
+        <div className="grid grid-cols-2 gap-12 flex-1 pb-6 min-h-0">
+          {/* Monolithic Nightmare Box */}
+          <motion.div
+            animate={{
+              opacity: step === 1 ? 1 : step > 1 ? 0.35 : 1,
+              scale: step === 1 ? 1 : 0.98
+            }}
+            transition={springTransition}
+            className={`border-2 p-8 rounded-2xl flex flex-col justify-between card-interactive transition-colors ${
+              step === 1 ? "border-current bg-current/10" : "border-current/30"
+            }`}
+          >
+            <div className="flex items-center justify-between border-b border-current/20 pb-4">
+              <span className="font-display text-[48px]">THE MONOLITHIC NIGHTMARE</span>
+              <X strokeWidth={2} size={48} />
+            </div>
 
-      <div className="flex-1 flex items-center justify-center gap-16">
-        {/* Monolithic block */}
-        <motion.div
-          className="flex flex-col items-center gap-3"
-          animate={{ opacity: showLayered ? 0.35 : 1 }}
-          transition={{ duration: 0.5 }}
-        >
-          <div className="flex items-center gap-2 mb-3">
-            <Boxes className="w-5 h-5 text-danger" />
-            <span className="text-sm font-semibold text-danger uppercase tracking-widest">
-              Monolithic
-            </span>
-          </div>
-          <div className="relative w-64 rounded-2xl bg-surface border border-danger/30 p-5 flex flex-wrap gap-2 justify-center">
-            {monolithicLayers.map((l) => (
-              <span
-                key={l}
-                className="px-2.5 py-1 rounded-lg bg-danger/10 border border-danger/20 text-xs font-mono text-danger/80"
-              >
-                {l}
-              </span>
-            ))}
-            {/* Tangled lines */}
-            <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-20">
-              <line x1="20%" y1="30%" x2="80%" y2="70%" stroke="#F87171" strokeWidth="1" />
-              <line x1="70%" y1="25%" x2="30%" y2="75%" stroke="#F87171" strokeWidth="1" />
-              <line x1="15%" y1="60%" x2="85%" y2="40%" stroke="#F87171" strokeWidth="1" />
-            </svg>
-          </div>
-          <span className="text-xs text-text-dim mt-1">
-            Everything tangled together
-          </span>
-        </motion.div>
+            <div className="flex-1 flex flex-col justify-center items-center gap-4 my-4 p-6 border-2 border-dashed border-current/30 rounded-xl">
+              <div className="font-mono text-[32px] text-center leading-relaxed">
+                App Logic ⟷ Cache Management ⟷ Sector Allocation ⟷ Hardware Drivers ⟷ Metadata
+              </div>
+              <div className="font-mono text-[24px] opacity-70">
+                [ Tightly Coupled Spaghetti Code • Zero Separation of Concerns ]
+              </div>
+            </div>
 
-        {/* Arrow */}
-        <AnimatePresence>
-          {showLayered && (
-            <motion.div
-              className="text-accent"
-              initial={{ opacity: 0, scale: 0 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.4 }}
-            >
-              <svg width="48" height="24" viewBox="0 0 48 24" fill="none">
-                <path d="M0 12h40m0 0l-8-8m8 8l-8 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            <div className="text-[28px] font-body opacity-80">
+              A bug in driver timing corrupts directory structures; adding NVMe breaks all application APIs.
+            </div>
+          </motion.div>
 
-        {/* Layered stack */}
-        <motion.div
-          className="flex flex-col items-center gap-3"
-          animate={{ opacity: showLayered ? 1 : 0.2 }}
-          transition={{ duration: 0.5 }}
-        >
-          <div className="flex items-center gap-2 mb-3">
-            <Layers className="w-5 h-5 text-accent" />
-            <span className="text-sm font-semibold text-accent uppercase tracking-widest">
-              Layered
-            </span>
-          </div>
-          <div className="flex flex-col gap-1.5 w-72">
-            {cleanLayers.map((l, i) => (
-              <motion.div
-                key={l}
-                className="px-4 py-2.5 rounded-xl bg-surface border border-accent/20 text-center"
-                initial={showLayered ? { opacity: 0, x: 30 } : {}}
-                animate={showLayered ? { opacity: 1, x: 0 } : {}}
-                transition={{ delay: i * 0.08, duration: 0.35 }}
-              >
-                <span className="text-xs font-medium text-accent/80">
-                  {l}
-                </span>
-              </motion.div>
-            ))}
-          </div>
-          <span className="text-xs text-text-dim mt-1">
-            Clean separation of concerns
-          </span>
-        </motion.div>
-      </div>
+          {/* Clean Layered Stack */}
+          <motion.div
+            animate={{
+              opacity: step === 2 || step >= 3 ? 1 : 0.35,
+              scale: step === 2 ? 1 : 0.98
+            }}
+            transition={springTransition}
+            className={`border-2 p-8 rounded-2xl flex flex-col justify-between bg-current/10 card-interactive transition-colors ${
+              step >= 2 ? "border-current" : "border-current/30"
+            }`}
+          >
+            <div className="flex items-center justify-between border-b border-current/20 pb-4">
+              <span className="font-display text-[48px]">THE LAYERED ABSTRACTION</span>
+              <Check strokeWidth={2} size={48} />
+            </div>
 
-      {/* Benefit & cost chips */}
-      <div className="flex gap-3 mt-auto flex-wrap">
-        <AnimatePresence>
-          {showBenefits &&
-            layerBenefits.map((b, i) => (
-              <motion.div
-                key={b.label}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-surface border border-return/20"
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.1, duration: 0.35 }}
-              >
-                <CheckCircle2 className="w-4 h-4 text-return" />
-                <div className="flex flex-col">
-                  <span className="text-sm font-semibold text-return">
-                    {b.label}
-                  </span>
-                  <span className="text-xs text-text-dim">{b.desc}</span>
+            <div className="flex-1 flex flex-col justify-center gap-3 my-4">
+              {[
+                "APPLICATION PROGRAMS",
+                "LOGICAL FILE SYSTEM",
+                "FILE-ORGANIZATION MODULE",
+                "BASIC FILE SYSTEM",
+                "I/O CONTROL",
+                "STORAGE DEVICES"
+              ].map((layer, idx) => (
+                <div
+                  key={layer}
+                  className="px-6 py-2 border border-current rounded-lg flex items-center justify-between font-display text-[32px]"
+                >
+                  <span>{layer}</span>
+                  <span className="font-mono text-[24px] opacity-50">TIER 0{idx + 1}</span>
                 </div>
-              </motion.div>
-            ))}
-          {showCosts &&
-            layerCosts.map((c) => (
-              <motion.div
-                key={c.label}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-surface border border-danger/20"
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.35 }}
-              >
-                <AlertTriangle className="w-4 h-4 text-danger" />
-                <div className="flex flex-col">
-                  <span className="text-sm font-semibold text-danger">
-                    {c.label}
-                  </span>
-                  <span className="text-xs text-text-dim">{c.desc}</span>
-                </div>
-              </motion.div>
-            ))}
-        </AnimatePresence>
+              ))}
+            </div>
+
+            <div className="text-[28px] font-body opacity-80">
+              Each layer communicates exclusively with immediately adjacent tiers via standardized contracts.
+            </div>
+          </motion.div>
+        </div>
+
+        {/* Bottom Giant Words Section */}
+        <div className="border-t-2 border-current/20 pt-6 grid grid-cols-4 gap-6 shrink-0">
+          <div className="p-6 border-2 border-current rounded-xl card-interactive" data-clickable>
+            <div className="font-display text-[72px] leading-none">MODULARITY</div>
+            <div className="text-[26px] font-body opacity-80 mt-2">
+              Isolated responsibilities; replace any module without side-effects.
+            </div>
+          </div>
+
+          <div className="p-6 border-2 border-current rounded-xl card-interactive" data-clickable>
+            <div className="font-display text-[72px] leading-none">REUSE</div>
+            <div className="text-[26px] font-body opacity-80 mt-2">
+              Single buffer cache &amp; VFS serve ext4, NTFS, FAT32, and NFS.
+            </div>
+          </div>
+
+          <div className="p-6 border-2 border-current rounded-xl card-interactive" data-clickable>
+            <div className="font-display text-[72px] leading-none">EASY DEBUG</div>
+            <div className="text-[26px] font-body opacity-80 mt-2">
+              Isolate faults strictly to block mapping, driver interrupts, or inodes.
+            </div>
+          </div>
+
+          <div
+            className="p-6 border-2 border-current rounded-xl card-interactive bg-current/10"
+            data-clickable
+          >
+            <div className="numeral-outline font-display text-[72px] leading-none">OVERHEAD</div>
+            <div className="text-[26px] font-body opacity-80 mt-2">
+              The engineering cost: function indirection &amp; call latency per tier.
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
+    </HeroHeader>
   );
 }

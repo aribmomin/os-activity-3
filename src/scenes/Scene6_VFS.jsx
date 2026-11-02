@@ -1,186 +1,119 @@
 /**
  * Scene 6 — Virtual File System (VFS)
- * Diagram: App → Syscalls → VFS → file-system implementations.
- * Click an FS to see the route animate.
+ * Polymorphic interface decoupling POSIX system calls from filesystem-specific disk structures.
+ * Strictly Bicolor (#004643 & #F0EDE5) with interactive filesystem selection.
  */
-import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Globe, HardDrive, MonitorSmartphone, Usb } from "lucide-react";
-import { vfsFileSystems } from "../data/content";
-import MiniMap from "../components/MiniMap";
 
-const fsIcons = {
-  ext4: HardDrive,
-  ntfs: MonitorSmartphone,
-  fat32: Usb,
-  nfs: Globe,
-};
+import { useState } from "react";
+import { motion } from "framer-motion";
+import { Terminal } from "lucide-react";
+import HeroHeader from "../components/HeroHeader";
+import { vfsData } from "../data.js";
 
-export default function Scene6_VFS({ step }) {
-  // step 0: show diagram
-  // step 1: show VFS interface list
-  // step 2: enable FS selection
-  // step 3: highlight NFS as network example
-  const [selectedFs, setSelectedFs] = useState(null);
-  const showInterface = step >= 1;
-  const enableSelection = step >= 2;
+export default function Scene6_VFS({ meta, step }) {
+  const fsKeys = ["ext4", "ntfs", "fat32", "nfs"];
+  const [clickedFS, setClickedFS] = useState(null);
+  const [prevStep, setPrevStep] = useState(step);
 
-  /* On step 3, auto-select NFS to demo network FS */
-  useEffect(() => {
-    if (step === 3 && !selectedFs) setSelectedFs("nfs");
-  }, [step]);
+  if (prevStep !== step) {
+    setPrevStep(step);
+    setClickedFS(null);
+  }
+
+  const selectedFS = clickedFS || fsKeys[Math.min(Math.max(0, step - 1), 3)];
 
   return (
-    <div className="w-full h-full flex px-10 py-8 gap-8">
-      {/* Mini-map */}
-      <div className="flex items-center">
-        <MiniMap activeLayerId="logical" />
-      </div>
+    <HeroHeader meta={meta} step={step}>
+      <div className="w-full h-full flex flex-col justify-between gap-6">
+        {/* Top: Application Programs Tier */}
+        <div className="w-full p-6 border-2 border-[#004643] rounded-2xl flex items-center justify-between bg-[#F0EDE5] card-interactive">
+          <div className="flex items-center gap-6">
+            <Terminal strokeWidth={2} size={54} />
+            <div className="flex flex-col">
+              <span className="font-display text-[48px]">APPLICATION PROGRAMS</span>
+              <span className="text-[26px] font-body opacity-80">
+                User processes issue uniform POSIX API calls: open(), read(), write(), close()
+              </span>
+            </div>
+          </div>
+          <span className="font-mono text-[26px] font-bold px-6 py-2 border border-[#004643] rounded-full">
+            UNIFORM SYSTEM CALLS
+          </span>
+        </div>
 
-      {/* Main content */}
-      <div className="flex-1 flex flex-col gap-5">
-        <motion.h2
-          className="text-3xl font-bold text-text"
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          Virtual File System{" "}
-          <span className="text-accent">(VFS)</span>
-        </motion.h2>
-        <p className="text-sm text-text-dim -mt-3">
-          One interface, many file-system implementations
-        </p>
-
-        {/* Diagram */}
-        <div className="flex-1 flex flex-col items-center justify-center gap-4">
-          {/* Application */}
-          <motion.div
-            className="px-8 py-3 rounded-2xl bg-surface border border-border text-sm font-medium text-text-muted"
-            initial={{ opacity: 0, y: -15 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            Application
-          </motion.div>
-
-          <div className="w-px h-6 bg-border" />
-
-          {/* System Calls */}
-          <motion.div
-            className="px-6 py-2 rounded-xl bg-surface border border-border text-xs text-text-dim"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.1 }}
-          >
-            System Calls: open · read · write · close
-          </motion.div>
-
-          <div className="w-px h-6 bg-border" />
-
-          {/* VFS block */}
-          <motion.div
-            className="px-10 py-4 rounded-2xl bg-accent/10 border border-accent/30 glow-accent flex flex-col items-center gap-1"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.2 }}
-          >
-            <span className="text-base font-bold text-accent">VFS</span>
-            <span className="text-xs text-accent/60">Common Interface</span>
-            {showInterface && (
-              <motion.div
-                className="flex gap-2 mt-2"
-                initial={{ opacity: 0, y: 5 }}
-                animate={{ opacity: 1, y: 0 }}
-              >
-                {["open()", "read()", "write()", "close()"].map((fn) => (
-                  <span
-                    key={fn}
-                    className="px-2 py-0.5 rounded bg-accent/10 text-[10px] font-mono text-accent/70"
-                  >
-                    {fn}
-                  </span>
-                ))}
-              </motion.div>
-            )}
-          </motion.div>
-
-          {/* Fan-out lines + FS cards */}
-          <div className="flex items-start gap-6 mt-2">
-            {vfsFileSystems.map((fs, i) => {
-              const Icon = fsIcons[fs.id];
-              const isSelected = selectedFs === fs.id;
-              return (
-                <motion.div
-                  key={fs.id}
-                  className="flex flex-col items-center gap-2"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 + i * 0.08 }}
-                >
-                  {/* Connector */}
-                  <motion.div
-                    className="w-px h-8"
-                    animate={{
-                      backgroundColor: isSelected ? "#38BDF8" : "#1F2933",
-                    }}
-                    transition={{ duration: 0.3 }}
-                  />
-                  {/* FS card */}
-                  <motion.button
-                    onClick={() => enableSelection && setSelectedFs(fs.id)}
-                    className={`
-                      flex flex-col items-center gap-2 px-6 py-4 rounded-2xl border
-                      transition-colors duration-300
-                      ${enableSelection ? "cursor-pointer" : "cursor-default"}
-                      ${
-                        isSelected
-                          ? "bg-accent/10 border-accent/40 glow-accent"
-                          : "bg-surface border-border hover:border-accent/20"
-                      }
-                    `}
-                    whileHover={enableSelection ? { scale: 1.03 } : {}}
-                    whileTap={enableSelection ? { scale: 0.98 } : {}}
-                  >
-                    <Icon
-                      className={`w-6 h-6 ${
-                        isSelected ? "text-accent" : "text-text-dim"
-                      }`}
-                    />
-                    <span
-                      className={`text-sm font-bold ${
-                        isSelected ? "text-accent" : "text-text-muted"
-                      }`}
-                    >
-                      {fs.label}
-                    </span>
-                    <span className="text-[10px] text-text-dim text-center max-w-[120px]">
-                      {fs.desc}
-                    </span>
-                  </motion.button>
-                </motion.div>
-              );
-            })}
+        {/* Middle: Wide VFS Band */}
+        <div className="w-full p-8 border-2 border-[#004643] bg-[#004643] text-[#F0EDE5] rounded-2xl flex flex-col gap-4 card-interactive">
+          <div className="flex items-center justify-between border-b border-[#F0EDE5]/20 pb-3">
+            <span className="font-display text-[56px] leading-none">
+              VIRTUAL FILE SYSTEM (VFS) INTERFACE
+            </span>
+            <span className="font-mono text-[26px] opacity-70">
+              POLYMORPHISM LAYER
+            </span>
           </div>
 
-          {/* Selected FS description */}
-          <AnimatePresence>
-            {selectedFs && (
+          <div className="flex items-center justify-between">
+            <div className="text-[28px] font-body max-w-3xl opacity-90">
+              Decouples standard POSIX system calls from filesystem-specific disk structures through the{" "}
+              <code className="font-mono font-bold">vnode</code> abstraction.
+            </div>
+
+            <div className="flex items-center gap-3 font-mono text-[24px]">
+              {vfsData.operations.map((op) => (
+                <span key={op} className="px-4 py-1.5 border border-[#F0EDE5]/40 rounded-full">
+                  {op}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Dynamic Route Line */}
+        <div className="flex items-center justify-center gap-4 py-1">
+          <div className="h-0.5 flex-1 bg-[#004643]/30" />
+          <span className="font-mono text-[24px] uppercase px-4 py-1 border border-[#004643]/40 rounded-full">
+            ROUTING REQUEST TO: <strong className="font-bold">{selectedFS.toUpperCase()}</strong>
+          </span>
+          <div className="h-0.5 flex-1 bg-[#004643]/30" />
+        </div>
+
+        {/* Bottom: 4 Large Filesystem Cards */}
+        <div className="grid grid-cols-4 gap-6 flex-1 min-h-0">
+          {vfsData.filesystems.map((fs) => {
+            const isSelected = selectedFS === fs.id;
+            return (
               <motion.div
-                className="mt-3 px-5 py-3 rounded-xl bg-accent/5 border border-accent/20 text-sm text-accent"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
+                key={fs.id}
+                layout
+                onClick={() => setClickedFS(fs.id)}
+                className={`p-6 rounded-2xl border-2 border-[#004643] flex flex-col justify-between cursor-pointer transition-colors duration-200 ${
+                  isSelected
+                    ? "bg-[#004643] text-[#F0EDE5]"
+                    : "bg-[#F0EDE5] text-[#004643] hover:bg-[#004643]/10"
+                }`}
+                data-clickable
               >
-                VFS routes the request to{" "}
-                <span className="font-bold">
-                  {vfsFileSystems.find((f) => f.id === selectedFs)?.label}
-                </span>{" "}
-                implementation
-                {selectedFs === "nfs" && " — over the network"}
+                <div className="flex items-center justify-between border-b border-current/20 pb-3">
+                  <span className="font-display text-[56px] leading-none uppercase">
+                    {fs.name}
+                  </span>
+                  <span className="font-mono text-[24px] uppercase opacity-70">
+                    {fs.type}
+                  </span>
+                </div>
+
+                <div className="text-[26px] font-body leading-snug py-2">
+                  {fs.desc}
+                </div>
+
+                <div className="pt-3 border-t border-current/20 font-mono text-[24px] opacity-80">
+                  {fs.features}
+                </div>
               </motion.div>
-            )}
-          </AnimatePresence>
+            );
+          })}
         </div>
       </div>
-    </div>
+    </HeroHeader>
   );
 }

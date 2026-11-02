@@ -1,293 +1,674 @@
 /**
- * App.jsx — Root presentation shell
+ * App.jsx — Master Presentation Shell
  *
- * Handles:
- * - 16:9 fixed canvas that scales to fit the window
- * - Scene/step navigation via keyboard
- * - Top bar (title, progress, presenter)
- * - Bottom progress bar + scene counter
- * - Timer (toggle T), hide mode (H), jump (1-8)
- * - Keyboard-hint toast on first load
+ * Implements:
+ * - 16:9 fixed canvas (1920x1080) with automatic proportional scaling
+ * - Strictly Bicolor dynamic theming: alternating #004643 Green and #F0EDE5 Cream
+ * - Custom magnetic / smooth cursor with interactive hover expansion
+ * - Keyboard navigation (Space/Arrows, 1-8 jump, T timer, F fullscreen, H hide UI)
+ * - Sound effects (soft procedural Web Audio API clicks with mute toggle)
+ * - Top information bar (topic, part, presenter, timer, quick controls)
+ * - Bottom progress bar (8 clickable scene blocks, step counter, navigation controls)
+ * - Auto-dismissing shortcuts guide toast
  */
+
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Timer, Eye, EyeOff } from "lucide-react";
-import { scenes, presenters } from "./data/content";
+import {
+  Timer,
+  Maximize2,
+  Minimize2,
+  Eye,
+  EyeOff,
+  Volume2,
+  VolumeX,
+  ChevronLeft,
+  ChevronRight,
+  HelpCircle,
+  X
+} from "lucide-react";
 
-/* ── Scene components ───────────────────────────────────────── */
-import Scene1_Title from "./scenes/Scene1_Title";
-import Scene2_FileManagement from "./scenes/Scene2_FileManagement";
-import Scene3_WhyLayers from "./scenes/Scene3_WhyLayers";
-import Scene4_Layers from "./scenes/Scene4_Layers";
-import Scene5_LiveTrace from "./scenes/Scene5_LiveTrace";
-import Scene6_VFS from "./scenes/Scene6_VFS";
-import Scene7_ProsCons from "./scenes/Scene7_ProsCons";
-import Scene8_Summary from "./scenes/Scene8_Summary";
+import { scenesMeta, presenters } from "./data.js";
+import {
+  Scene1Landing,
+  Scene2FileManagement,
+  Scene3WhyLayers,
+  Scene4The6Layers,
+  Scene5LiveTrace,
+  Scene6VFS,
+  Scene7ProsCons,
+  Scene8Summary
+} from "./scenes.jsx";
 
 const sceneComponents = [
-  Scene1_Title,
-  Scene2_FileManagement,
-  Scene3_WhyLayers,
-  Scene4_Layers,
-  Scene5_LiveTrace,
-  Scene6_VFS,
-  Scene7_ProsCons,
-  Scene8_Summary,
+  Scene1Landing,
+  Scene2FileManagement,
+  Scene3WhyLayers,
+  Scene4The6Layers,
+  Scene5LiveTrace,
+  Scene6VFS,
+  Scene7ProsCons,
+  Scene8Summary
 ];
 
-/* ── Constants ──────────────────────────────────────────────── */
 const CANVAS_W = 1920;
 const CANVAS_H = 1080;
 
+/* ── Procedural Web Audio Synth for Subtle Feedback ──────────────────────── */
+class SoundFX {
+  constructor() {
+    this.ctx = null;
+    this.enabled = true;
+  }
+
+  init() {
+    if (!this.ctx && typeof window !== "undefined") {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (AudioCtx) {
+        this.ctx = new AudioCtx();
+      }
+    }
+    if (this.ctx && this.ctx.state === "suspended") {
+      this.ctx.resume();
+    }
+  }
+
+  playStep() {
+    if (!this.enabled) return;
+    try {
+      this.init();
+      if (!this.ctx) return;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(580, this.ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(780, this.ctx.currentTime + 0.05);
+
+      gain.gain.setValueAtTime(0.06, this.ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.06);
+
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start();
+      osc.stop(this.ctx.currentTime + 0.06);
+    } catch {
+      // Audio autoplay policy catch
+    }
+  }
+
+  playScene() {
+    if (!this.enabled) return;
+    try {
+      this.init();
+      if (!this.ctx) return;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(260, this.ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(440, this.ctx.currentTime + 0.12);
+
+      gain.gain.setValueAtTime(0.09, this.ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.14);
+
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start();
+      osc.stop(this.ctx.currentTime + 0.14);
+    } catch {
+      // Audio catch
+    }
+  }
+}
+
+const sfx = new SoundFX();
+
 export default function App() {
-  const [sceneIdx, setSceneIdx] = useState(0); // 0-indexed
+  const [sceneIdx, setSceneIdx] = useState(0);
   const [step, setStep] = useState(0);
+  const [scale, setScale] = useState(1);
   const [hideUI, setHideUI] = useState(false);
   const [showTimer, setShowTimer] = useState(false);
   const [elapsed, setElapsed] = useState(0);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [soundOn, setSoundOn] = useState(true);
   const [showToast, setShowToast] = useState(true);
-  const [scale, setScale] = useState(1);
+  const [cursorPos, setCursorPos] = useState({ x: -100, y: -100 });
+  const [cursorHover, setCursorHover] = useState(false);
+  const [cursorVisible, setCursorVisible] = useState(false);
+
   const containerRef = useRef(null);
   const timerRef = useRef(null);
 
-  const currentScene = scenes[sceneIdx];
-  const totalSteps = currentScene.steps;
+  const currentScene = scenesMeta[sceneIdx];
   const CurrentComponent = sceneComponents[sceneIdx];
+  const currentTheme = currentScene?.theme || "green";
+  const isGreen = currentTheme === "green";
+  const themeClass = isGreen ? "theme-green" : "theme-cream";
 
-  /* ── Responsive scaling ─────────────────────────────────── */
+  /* ── Proportional 16:9 Canvas Scaling ──────────────────────────────────── */
   useEffect(() => {
     const handleResize = () => {
       const vw = window.innerWidth;
       const vh = window.innerHeight;
-      setScale(Math.min(vw / CANVAS_W, vh / CANVAS_H));
+      const nextScale = Math.min(vw / CANVAS_W, vh / CANVAS_H);
+      setScale(nextScale);
     };
+
     handleResize();
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  /* ── Timer ──────────────────────────────────────────────── */
+  /* ── Custom Mouse Cursor Tracking ──────────────────────────────────────── */
+  useEffect(() => {
+    document.body.classList.add("custom-cursor-active");
+
+    const onMouseMove = (e) => {
+      setCursorPos({ x: e.clientX, y: e.clientY });
+      setCursorVisible(true);
+
+      const target = e.target;
+      if (
+        target &&
+        (target.closest("[data-clickable]") ||
+          target.closest("button") ||
+          target.closest("a") ||
+          target.closest(".card-interactive"))
+      ) {
+        setCursorHover(true);
+      } else {
+        setCursorHover(false);
+      }
+    };
+
+    const onMouseLeave = () => setCursorVisible(false);
+    const onMouseEnter = () => setCursorVisible(true);
+
+    window.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseleave", onMouseLeave);
+    document.addEventListener("mouseenter", onMouseEnter);
+
+    return () => {
+      document.body.classList.remove("custom-cursor-active");
+      window.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseleave", onMouseLeave);
+      document.removeEventListener("mouseenter", onMouseEnter);
+    };
+  }, []);
+
+  /* ── Presenter Timer ───────────────────────────────────────────────────── */
   useEffect(() => {
     if (showTimer) {
-      timerRef.current = setInterval(() => setElapsed((e) => e + 1), 1000);
-    } else if (timerRef.current) {
-      clearInterval(timerRef.current);
+      timerRef.current = setInterval(() => setElapsed((prev) => prev + 1), 1000);
+    } else {
+      if (timerRef.current) clearInterval(timerRef.current);
     }
-    return () => clearInterval(timerRef.current);
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
   }, [showTimer]);
 
-  const formatTime = (s) =>
-    `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+  const formatTime = (secs) => {
+    const mins = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${String(mins).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  };
 
-  /* ── Auto-dismiss toast ─────────────────────────────────── */
+  /* ── Fullscreen Sync ───────────────────────────────────────────────────── */
   useEffect(() => {
-    const t = setTimeout(() => setShowToast(false), 5000);
+    const onFSChange = () => {
+      setIsFullscreen(Boolean(document.fullscreenElement));
+    };
+    document.addEventListener("fullscreenchange", onFSChange);
+    return () => document.removeEventListener("fullscreenchange", onFSChange);
+  }, []);
+
+  const toggleFullscreen = useCallback(() => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen().catch(() => {});
+    }
+  }, []);
+
+  /* ── Sound Toggle ──────────────────────────────────────────────────────── */
+  const toggleSound = useCallback(() => {
+    setSoundOn((prev) => {
+      const next = !prev;
+      sfx.enabled = next;
+      return next;
+    });
+  }, []);
+
+  /* ── Auto-dismiss Help Toast ───────────────────────────────────────────── */
+  useEffect(() => {
+    const t = setTimeout(() => setShowToast(false), 7000);
     return () => clearTimeout(t);
   }, []);
 
-  /* ── Navigation ─────────────────────────────────────────── */
+  /* ── Navigation Handlers ───────────────────────────────────────────────── */
   const goNext = useCallback(() => {
-    if (step < totalSteps - 1) {
+    if (step < currentScene.totalSteps - 1) {
       setStep((s) => s + 1);
-    } else if (sceneIdx < scenes.length - 1) {
+      sfx.playStep();
+    } else if (sceneIdx < scenesMeta.length - 1) {
       setSceneIdx((i) => i + 1);
       setStep(0);
+      sfx.playScene();
     }
-  }, [step, totalSteps, sceneIdx]);
+  }, [step, currentScene.totalSteps, sceneIdx]);
 
   const goPrev = useCallback(() => {
     if (step > 0) {
       setStep((s) => s - 1);
+      sfx.playStep();
     } else if (sceneIdx > 0) {
+      const prevScene = scenesMeta[sceneIdx - 1];
       setSceneIdx((i) => i - 1);
-      const prevSteps = scenes[sceneIdx - 1].steps;
-      setStep(prevSteps - 1);
+      setStep(prevScene.totalSteps - 1);
+      sfx.playScene();
     }
   }, [step, sceneIdx]);
 
-  const jumpToScene = useCallback((idx) => {
-    if (idx >= 0 && idx < scenes.length) {
-      setSceneIdx(idx);
-      setStep(0);
-    }
+  const jumpToScene = useCallback(
+    (idx) => {
+      if (idx >= 0 && idx < scenesMeta.length && idx !== sceneIdx) {
+        setSceneIdx(idx);
+        setStep(0);
+        sfx.playScene();
+      }
+    },
+    [sceneIdx]
+  );
+
+  const handleRestart = useCallback(() => {
+    setSceneIdx(0);
+    setStep(0);
+    sfx.playScene();
   }, []);
 
-  /* ── Keyboard handler ───────────────────────────────────── */
+  /* ── Keyboard Shortcuts ────────────────────────────────────────────────── */
   useEffect(() => {
-    const handleKey = (e) => {
+    const handleKeyDown = (e) => {
+      // Ignore if focus is in an input or textarea
+      if (
+        document.activeElement &&
+        ["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement.tagName)
+      ) {
+        return;
+      }
+
       switch (e.key) {
         case "ArrowRight":
         case " ":
+        case "PageDown":
+        case "Enter":
           e.preventDefault();
           goNext();
           break;
+
         case "ArrowLeft":
+        case "PageUp":
+        case "Backspace":
           e.preventDefault();
           goPrev();
           break;
+
         case "h":
         case "H":
-          setHideUI((v) => !v);
+          e.preventDefault();
+          setHideUI((prev) => !prev);
           break;
+
         case "t":
         case "T":
-          setShowTimer((v) => !v);
+          e.preventDefault();
+          setShowTimer((prev) => !prev);
           break;
-        case "1": case "2": case "3": case "4":
-        case "5": case "6": case "7": case "8":
+
+        case "f":
+        case "F":
+          e.preventDefault();
+          toggleFullscreen();
+          break;
+
+        case "m":
+        case "M":
+          e.preventDefault();
+          toggleSound();
+          break;
+
+        case "Home":
+          e.preventDefault();
+          handleRestart();
+          break;
+
+        case "End":
+          e.preventDefault();
+          jumpToScene(scenesMeta.length - 1);
+          break;
+
+        case "1":
+        case "2":
+        case "3":
+        case "4":
+        case "5":
+        case "6":
+        case "7":
+        case "8":
+          e.preventDefault();
           jumpToScene(Number(e.key) - 1);
           break;
+
         default:
           break;
       }
     };
-    window.addEventListener("keydown", handleKey);
-    return () => window.removeEventListener("keydown", handleKey);
-  }, [goNext, goPrev, jumpToScene]);
 
-  /* ── Global progress (across all scenes/steps) ──────────── */
-  const totalGlobalSteps = scenes.reduce((acc, s) => acc + s.steps, 0);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [goNext, goPrev, jumpToScene, handleRestart, toggleFullscreen, toggleSound]);
+
+  /* ── Global Step Progress ──────────────────────────────────────────────── */
+  const totalGlobalSteps = scenesMeta.reduce((acc, s) => acc + s.totalSteps, 0);
   const completedSteps =
-    scenes.slice(0, sceneIdx).reduce((acc, s) => acc + s.steps, 0) + step;
-  const progressPct = (completedSteps / (totalGlobalSteps - 1)) * 100;
+    scenesMeta.slice(0, sceneIdx).reduce((acc, s) => acc + s.totalSteps, 0) + step;
+  const progressRatio = completedSteps / (totalGlobalSteps - 1);
 
   return (
     <div
-      className={`w-screen h-screen bg-bg flex items-center justify-center overflow-hidden ${
-        hideUI ? "cursor-hidden" : ""
-      }`}
       ref={containerRef}
+      className={`relative w-screen h-screen overflow-hidden flex items-center justify-center select-none transition-colors duration-500 ${
+        isGreen ? "bg-[#004643]" : "bg-[#F0EDE5]"
+      }`}
     >
-      {/* Scaled 16:9 canvas */}
+      {/* ── Custom Magnetic Cursor ───────────────────────────────────────── */}
+      {cursorVisible && !hideUI && (
+        <>
+          <motion.div
+            className="fixed pointer-events-none z-50 rounded-full mix-blend-difference"
+            animate={{
+              x: cursorPos.x - (cursorHover ? 28 : 8),
+              y: cursorPos.y - (cursorHover ? 28 : 8),
+              width: cursorHover ? 56 : 16,
+              height: cursorHover ? 56 : 16,
+              backgroundColor: "#F0EDE5",
+              opacity: cursorHover ? 0.8 : 0.95
+            }}
+            transition={{
+              type: "spring",
+              stiffness: 450,
+              damping: 28,
+              mass: 0.1
+            }}
+          />
+          {cursorHover && (
+            <motion.div
+              className="fixed pointer-events-none z-50 rounded-full border-2 border-white/60"
+              animate={{
+                x: cursorPos.x - 36,
+                y: cursorPos.y - 36,
+                width: 72,
+                height: 72
+              }}
+              transition={{
+                type: "spring",
+                stiffness: 300,
+                damping: 25
+              }}
+            />
+          )}
+        </>
+      )}
+
+      {/* ── 16:9 Scaled Canvas (1920x1080) ───────────────────────────────── */}
       <div
         style={{
           width: CANVAS_W,
           height: CANVAS_H,
           transform: `scale(${scale})`,
-          transformOrigin: "center center",
+          transformOrigin: "center center"
         }}
-        className="relative bg-bg overflow-hidden shrink-0"
+        className={`relative ${themeClass} overflow-hidden shrink-0 flex flex-col justify-between p-8`}
       >
-        {/* ── Top bar ─────────────────────────────────────── */}
+        {/* ── Top Information Bar ────────────────────────────────────────── */}
         <AnimatePresence>
           {!hideUI && (
-            <motion.div
-              className="absolute top-0 left-0 right-0 h-11 flex items-center justify-between px-6 z-30 bg-bg/80 backdrop-blur-sm border-b border-border"
-              initial={{ y: -44 }}
-              animate={{ y: 0 }}
-              exit={{ y: -44 }}
-              transition={{ duration: 0.3 }}
+            <motion.header
+              initial={{ y: -60, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: -60, opacity: 0 }}
+              transition={{ duration: 0.25 }}
+              className="w-full flex items-center justify-between border-b border-current/20 pb-4 shrink-0 z-30"
             >
-              <span className="text-xs font-medium text-text-dim tracking-wide">
-                File-System Layers & Architecture
-              </span>
+              {/* Left breadcrumb */}
               <div className="flex items-center gap-4">
-                {showTimer && (
-                  <motion.div
-                    className="flex items-center gap-1.5 text-xs text-text-dim"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                  >
-                    <Timer className="w-3.5 h-3.5" />
-                    <span className="font-mono">{formatTime(elapsed)}</span>
-                  </motion.div>
-                )}
-                <span className="text-xs text-accent font-medium">
-                  Part {currentScene.part} — {presenters[currentScene.part]}
+                <span className="font-display text-[26px] tracking-wider uppercase">
+                  OPERATING SYSTEMS
+                </span>
+                <span className="opacity-30">•</span>
+                <span className="font-mono text-[22px] opacity-70">
+                  SCENE 0{currentScene.id} / 0{scenesMeta.length} — {currentScene.title}
                 </span>
               </div>
-            </motion.div>
+
+              {/* Right presenter and quick toggles */}
+              <div className="flex items-center gap-6">
+                {/* Timer badge */}
+                {showTimer && (
+                  <div className="flex items-center gap-2 px-4 py-1.5 border border-current rounded-full font-mono text-[22px]">
+                    <Timer size={22} strokeWidth={2} />
+                    <span>{formatTime(elapsed)}</span>
+                  </div>
+                )}
+
+                {/* Presenter Pill */}
+                <div className="font-display text-[22px] px-5 py-1.5 border border-current rounded-full tracking-wide">
+                  {presenters[currentScene.part]}
+                </div>
+
+                {/* Control Action Icons */}
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={toggleSound}
+                    title={soundOn ? "Mute audio (M)" : "Enable audio (M)"}
+                    className="p-2 border border-current/30 rounded-xl hover:bg-current hover:text-[var(--bg)] transition-colors"
+                    data-clickable
+                  >
+                    {soundOn ? <Volume2 size={24} /> : <VolumeX size={24} />}
+                  </button>
+
+                  <button
+                    onClick={() => setShowTimer((v) => !v)}
+                    title="Toggle timer (T)"
+                    className={`p-2 border border-current/30 rounded-xl hover:bg-current hover:text-[var(--bg)] transition-colors ${
+                      showTimer ? "bg-current text-[var(--bg)]" : ""
+                    }`}
+                    data-clickable
+                  >
+                    <Timer size={24} />
+                  </button>
+
+                  <button
+                    onClick={toggleFullscreen}
+                    title="Toggle fullscreen (F)"
+                    className="p-2 border border-current/30 rounded-xl hover:bg-current hover:text-[var(--bg)] transition-colors"
+                    data-clickable
+                  >
+                    {isFullscreen ? <Minimize2 size={24} /> : <Maximize2 size={24} />}
+                  </button>
+
+                  <button
+                    onClick={() => setHideUI(true)}
+                    title="Hide UI chrome (H)"
+                    className="p-2 border border-current/30 rounded-xl hover:bg-current hover:text-[var(--bg)] transition-colors"
+                    data-clickable
+                  >
+                    <EyeOff size={24} />
+                  </button>
+                </div>
+              </div>
+            </motion.header>
           )}
         </AnimatePresence>
 
-        {/* ── Scene content ────────────────────────────────── */}
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={sceneIdx}
-            className="absolute inset-0"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.35 }}
+        {/* ── Unhide floating button when hideUI is active ────────────────── */}
+        {hideUI && (
+          <button
+            onClick={() => setHideUI(false)}
+            title="Restore UI (H)"
+            className="absolute top-6 right-6 z-40 p-3 rounded-full border border-current bg-current/10 hover:bg-current hover:text-[var(--bg)] transition-colors"
+            data-clickable
           >
-            <CurrentComponent step={step} />
-          </motion.div>
-        </AnimatePresence>
+            <Eye size={24} />
+          </button>
+        )}
 
-        {/* ── Bottom bar ───────────────────────────────────── */}
+        {/* ── Main Scene Canvas ──────────────────────────────────────────── */}
+        <main className="flex-1 w-full min-h-0 relative my-4">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={sceneIdx}
+              initial={{ opacity: 0, scale: 0.99 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 1.01 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+              className="w-full h-full"
+            >
+              <CurrentComponent
+                meta={currentScene}
+                step={step}
+                onRestart={handleRestart}
+              />
+            </motion.div>
+          </AnimatePresence>
+        </main>
+
+        {/* ── Bottom Navigation & Progress Bar ────────────────────────────── */}
         <AnimatePresence>
           {!hideUI && (
-            <motion.div
-              className="absolute bottom-0 left-0 right-0 z-30 flex flex-col"
-              initial={{ y: 40 }}
-              animate={{ y: 0 }}
-              exit={{ y: 40 }}
-              transition={{ duration: 0.3 }}
+            <motion.footer
+              initial={{ y: 60, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 60, opacity: 0 }}
+              transition={{ duration: 0.25 }}
+              className="w-full flex flex-col gap-3 pt-3 border-t border-current/20 shrink-0 z-30"
             >
-              {/* Progress bar */}
-              <div className="progress-track mx-6">
-                <div
-                  className="progress-fill"
-                  style={{ width: `${progressPct}%` }}
+              {/* Continuous Global Progress Line */}
+              <div className="w-full h-1.5 bg-current/20 rounded-full overflow-hidden">
+                <motion.div
+                  className="h-full bg-current rounded-full"
+                  initial={false}
+                  animate={{ width: `${progressRatio * 100}%` }}
+                  transition={{ duration: 0.25, ease: "easeOut" }}
                 />
               </div>
-              {/* Scene counter */}
-              <div className="flex items-center justify-between px-6 py-2">
-                <div className="flex gap-1">
-                  {scenes.map((_, i) => (
-                    <button
-                      key={i}
-                      onClick={() => jumpToScene(i)}
-                      className={`w-6 h-1.5 rounded-full transition-colors duration-300 ${
-                        i === sceneIdx
-                          ? "bg-accent"
-                          : i < sceneIdx
-                          ? "bg-accent/30"
-                          : "bg-border"
-                      }`}
-                    />
-                  ))}
+
+              {/* Controls and Scene Jump Buttons */}
+              <div className="w-full flex items-center justify-between">
+                {/* 8 Clickable Scene Buttons */}
+                <div className="flex items-center gap-2">
+                  {scenesMeta.map((s, idx) => {
+                    const isCurrent = idx === sceneIdx;
+                    const isPast = idx < sceneIdx;
+                    return (
+                      <button
+                        key={s.id}
+                        onClick={() => jumpToScene(idx)}
+                        className={`px-4 py-1.5 rounded-lg border font-mono text-[20px] transition-all ${
+                          isCurrent
+                            ? "border-current bg-current text-[var(--bg)] font-bold shadow-sm"
+                            : isPast
+                            ? "border-current/40 bg-current/10 hover:border-current"
+                            : "border-current/20 opacity-50 hover:opacity-90 hover:border-current/50"
+                        }`}
+                        title={`Scene ${s.id}: ${s.title}`}
+                        data-clickable
+                      >
+                        0{s.id}
+                      </button>
+                    );
+                  })}
                 </div>
-                <span className="text-xs font-mono text-text-dim">
-                  {sceneIdx + 1}/{scenes.length}
-                </span>
+
+                {/* Step Sub-Progress */}
+                <div className="font-mono text-[22px] tracking-wide">
+                  <span className="opacity-50">STEP </span>
+                  <span className="font-bold">{step + 1}</span>
+                  <span className="opacity-50"> / {currentScene.totalSteps}</span>
+                </div>
+
+                {/* Next / Prev Buttons */}
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={goPrev}
+                    disabled={sceneIdx === 0 && step === 0}
+                    className="flex items-center gap-2 px-5 py-2 border border-current rounded-xl hover:bg-current hover:text-[var(--bg)] disabled:opacity-30 disabled:pointer-events-none transition-colors font-display text-[22px]"
+                    data-clickable
+                  >
+                    <ChevronLeft size={24} />
+                    <span>PREV</span>
+                  </button>
+
+                  <button
+                    onClick={goNext}
+                    disabled={
+                      sceneIdx === scenesMeta.length - 1 &&
+                      step === currentScene.totalSteps - 1
+                    }
+                    className="flex items-center gap-2 px-6 py-2 border-2 border-current rounded-xl bg-current text-[var(--bg)] hover:opacity-90 disabled:opacity-30 disabled:pointer-events-none transition-opacity font-display text-[22px]"
+                    data-clickable
+                  >
+                    <span>NEXT</span>
+                    <ChevronRight size={24} />
+                  </button>
+                </div>
               </div>
-            </motion.div>
+            </motion.footer>
           )}
         </AnimatePresence>
 
-        {/* ── Keyboard toast ───────────────────────────────── */}
+        {/* ── First-Load Keyboard Shortcut Hint Toast ────────────────────── */}
         <AnimatePresence>
           {showToast && !hideUI && (
             <motion.div
-              className="absolute bottom-14 left-1/2 -translate-x-1/2 z-40 px-5 py-2.5 rounded-xl bg-surface border border-border backdrop-blur-md"
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 20 }}
-              transition={{ duration: 0.4 }}
+              exit={{ opacity: 0, y: 30 }}
+              transition={{ duration: 0.3 }}
+              className="absolute bottom-28 left-1/2 -translate-x-1/2 z-50 px-8 py-3 rounded-2xl border-2 border-current bg-[var(--bg)] text-[var(--fg)] shadow-2xl flex items-center gap-6 font-mono text-[20px]"
             >
-              <div className="flex items-center gap-4 text-xs text-text-dim">
-                <span>
-                  <kbd className="px-1.5 py-0.5 rounded bg-bg border border-border font-mono text-text-muted">→</kbd>{" "}
-                  next
-                </span>
-                <span>
-                  <kbd className="px-1.5 py-0.5 rounded bg-bg border border-border font-mono text-text-muted">←</kbd>{" "}
-                  prev
-                </span>
-                <span>
-                  <kbd className="px-1.5 py-0.5 rounded bg-bg border border-border font-mono text-text-muted">H</kbd>{" "}
-                  hide UI
-                </span>
-                <span>
-                  <kbd className="px-1.5 py-0.5 rounded bg-bg border border-border font-mono text-text-muted">T</kbd>{" "}
-                  timer
-                </span>
-                <span>
-                  <kbd className="px-1.5 py-0.5 rounded bg-bg border border-border font-mono text-text-muted">1-8</kbd>{" "}
-                  jump
-                </span>
+              <div className="flex items-center gap-2">
+                <HelpCircle size={24} />
+                <span className="font-bold">SHORTCUTS:</span>
               </div>
+              <span>
+                <kbd className="px-2 py-0.5 border border-current rounded font-bold">SPACE</kbd> /{" "}
+                <kbd className="px-2 py-0.5 border border-current rounded font-bold">→</kbd> Next
+              </span>
+              <span>
+                <kbd className="px-2 py-0.5 border border-current rounded font-bold">←</kbd> Prev
+              </span>
+              <span>
+                <kbd className="px-2 py-0.5 border border-current rounded font-bold">1-8</kbd> Jump
+              </span>
+              <span>
+                <kbd className="px-2 py-0.5 border border-current rounded font-bold">T</kbd> Timer
+              </span>
+              <span>
+                <kbd className="px-2 py-0.5 border border-current rounded font-bold">F</kbd> Fullscreen
+              </span>
+              <span>
+                <kbd className="px-2 py-0.5 border border-current rounded font-bold">H</kbd> Hide UI
+              </span>
+
+              <button
+                onClick={() => setShowToast(false)}
+                className="p-1 hover:opacity-70 transition-opacity ml-2"
+                data-clickable
+              >
+                <X size={22} />
+              </button>
             </motion.div>
           )}
         </AnimatePresence>

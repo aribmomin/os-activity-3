@@ -5,14 +5,9 @@
 
 ---
 
-## 👥 Presentation Team
+## 💻 Developer
 
-| Name | Role |
-| :--- | :--- |
-| **Arib Momin** | Operating Systems Module Lead |
-| **Rohan Gawade** | Operating Systems Module Lead |
-| **Sneha Dhole** | Operating Systems Module Lead |
-| **Sanika Kharade** | Operating Systems Module Lead |
+Developed by **Arib Momin**
 
 ---
 
@@ -29,7 +24,7 @@
 ## 🎬 Presentation Scenes Overview
 
 1. **Scene 01: Landing & Title**  
-   Bold Norwester display typography, team member roster, and animated architectural marquee ribbon.
+   Bold Norwester display typography, developer badge, and animated architectural marquee ribbon.
 
 2. **Scene 02: What is File Management?**  
    Side-by-side contrast between the **User View** (symbolic, human-readable file streams) and **Disk Reality** (fragmented 4KB sector blocks), bridged by the 6 core OS responsibilities (*Naming*, *Allocation*, *Access*, *Protection*, *Metadata*, *Reliability*).
